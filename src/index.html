@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SitePilot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0f1e;
+    --bg-card: #111827;
+    --bg-input: #1a2236;
+    --border: #1e293b;
+    --border-focus: #3b82f6;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-muted: #475569;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --green: #22c55e;
+    --green-glow: rgba(34, 197, 94, 0.15);
+    --red: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.12);
+    --yellow: #eab308;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+
+  /* ── Drag region spacer for title bar ──────────────────────── */
+  .titlebar { height: 36px; width: 100%; flex-shrink: 0; }
+
+  /* ── Layout ────────────────────────────────────────────────── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 28px 28px;
+    -webkit-app-region: no-drag;
+  }
+
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Logo / Header ─────────────────────────────────────────── */
+  .logo-area {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 24px rgba(59, 130, 246, 0.25);
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ── Views ─────────────────────────────────────────────────── */
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn 0.25s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Cards ─────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  /* ── Inputs ────────────────────────────────────────────────── */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .field input::placeholder { color: var(--text-muted); }
+
+  .field input.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: -0.3px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .field-row .field { flex: 1; }
+
+  /* ── Buttons ───────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-app-region: no-drag;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-green {
+    background: var(--green);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(34, 197, 94, 0.3);
+  }
+  .btn-green:hover { background: #16a34a; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg-input); color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .btn-danger:hover { background: var(--red-glow); }
+
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
+  .btn-full { width: 100%; }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ── Status Badge ──────────────────────────────────────────── */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-badge.connected {
+    background: var(--green-glow);
+    color: var(--green);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  .status-badge.disconnected {
+    background: var(--red-glow);
+    color: var(--red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .status-dot.pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Connection mode tabs ──────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-input);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-dim);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-app-region: no-drag;
+  }
+
+  .tab.active {
+    background: var(--bg-card);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Setup mode tabs ───────────────────────────────────────── */
+  .setup-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+
+  .setup-tab {
+    flex: 1;
+    padding: 8px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-app-region: no-drag;
+  }
+
+  .setup-tab.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  /* ── Feedback messages ─────────────────────────────────────── */
+  .msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .msg.show { display: block; animation: fadeIn 0.2s ease; }
+
+  .msg.success {
+    background: var(--green-glow);
+    color: var(--green);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  .msg.error {
+    background: var(--red-glow);
+    color: var(--red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .msg.info {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+
+  /* ── Loading spinner ───────────────────────────────────────── */
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Dashboard stats ───────────────────────────────────────── */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { color: var(--text-dim); }
+  .stat-val { color: var(--text); font-weight: 500; }
+
+  /* ── Footer ────────────────────────────────────────────────── */
+  .footer {
+    padding: 12px 28px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .footer a:hover { color: var(--accent); }
+
+  /* ── Utility ───────────────────────────────────────────────── */
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .gap-8 { display: flex; gap: 8px; }
+  .text-center { text-align: center; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="titlebar"></div>
+
+  <div class="content">
+    <!-- ─── Logo ─────────────────────────────────────────────── -->
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">SitePilot</div>
+      <div class="logo-sub">AI Copilot for WordPress</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VIEW: LICENSE ACTIVATION (first screen)
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="view-license" class="view active">
+      <div class="card">
+        <div class="card-label">Activate your license</div>
+        <div class="field">
+          <label>License Key</label>
+          <input type="text" id="license-key" class="mono" placeholder="SP-XXXXX-XXXXX-XXXXX-XXXXX"
+                 style="text-transform:uppercase; text-align:center; font-size:14px; letter-spacing:1px;">
+        </div>
+        <div id="license-msg" class="msg"></div>
+        <button class="btn btn-primary btn-full mt-16" id="btn-activate" onclick="activateLicense()">
+          Activate
+        </button>
+      </div>
+      <div class="text-center mt-16">
+        <p style="font-size:12px; color:var(--text-dim); line-height:1.6;">
+          Don't have a license?<br>
+          <a style="color:var(--accent); cursor:pointer; text-decoration:none;" onclick="window.sitepilot.shell.open('https://sitepilot.dev/pricing')">
+            Purchase one at sitepilot.dev
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VIEW: SETUP (not connected)
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="view-setup" class="view">
+
+      <!-- Setup mode toggle -->
+      <div class="setup-tabs">
+        <button class="setup-tab active" onclick="setSetupMode('auto')">Auto Setup</button>
+        <button class="setup-tab" onclick="setSetupMode('manual')">Manual</button>
+      </div>
+
+      <!-- ── Auto Setup ─────────────────────────────────────── -->
+      <div id="setup-auto" class="card">
+        <div class="card-label">Connect to your WordPress site</div>
+        <div class="field">
+          <label>Site URL</label>
+          <input type="url" id="auto-url" placeholder="https://yoursite.com">
+        </div>
+        <div class="field">
+          <label>WordPress Username</label>
+          <input type="text" id="auto-user" placeholder="admin">
+        </div>
+        <div class="field">
+          <label>WordPress Password or Application Password</label>
+          <input type="password" id="auto-pass" placeholder="xxxx xxxx xxxx xxxx">
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin: 8px 0 0;">
+          Credentials are used once to push the API key, then discarded. Never stored.
+        </p>
+        <div id="auto-msg" class="msg"></div>
+        <button class="btn btn-primary btn-full mt-16" id="btn-auto-setup" onclick="doAutoSetup()">
+          Connect &amp; Generate Key
+        </button>
+      </div>
+
+      <!-- ── Manual Setup ───────────────────────────────────── -->
+      <div id="setup-manual" class="card hidden">
+        <div class="card-label">Manual configuration</div>
+        <div class="field">
+          <label>Site URL</label>
+          <input type="url" id="manual-url" placeholder="https://yoursite.com">
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <div class="field-row">
+            <div class="field">
+              <input type="text" id="manual-key" class="mono" placeholder="sp_..." readonly>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-bottom:0; white-space:nowrap;" onclick="generateKey()">Generate</button>
+          </div>
+          <p style="font-size:11px; color:var(--text-muted); margin: 6px 0 0;">
+            Copy this key to Settings &rarr; SitePilot in your WordPress admin.
+          </p>
+        </div>
+        <div id="manual-msg" class="msg"></div>
+        <button class="btn btn-primary btn-full mt-12" id="btn-manual-test" onclick="doManualTest()">
+          Test Connection
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         VIEW: CONNECTED DASHBOARD
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="view-dashboard" class="view">
+
+      <!-- Status -->
+      <div class="text-center mb-8">
+        <span id="dash-status" class="status-badge connected">
+          <span class="status-dot pulse"></span> Connected
+        </span>
+      </div>
+
+      <!-- License Info -->
+      <div class="card">
+        <div class="card-label">License</div>
+        <div class="stat-row">
+          <span class="stat-key">Plan</span>
+          <span class="stat-val" id="dash-plan">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Key</span>
+          <span class="stat-val" id="dash-license" style="font-family:'JetBrains Mono',monospace; font-size:11px;">--</span>
+        </div>
+      </div>
+
+      <!-- Site Info -->
+      <div class="card">
+        <div class="card-label">Connected Site</div>
+        <div class="stat-row">
+          <span class="stat-key">Site</span>
+          <span class="stat-val" id="dash-site-name">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">URL</span>
+          <span class="stat-val" id="dash-site-url" style="font-size:12px; word-break:break-all;">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Plugin Version</span>
+          <span class="stat-val" id="dash-version">--</span>
+        </div>
+      </div>
+
+      <!-- AI Connection Mode -->
+      <div class="card">
+        <div class="card-label">AI Connection Mode</div>
+        <div class="tabs">
+          <button class="tab active" onclick="setMode('claude')">Claude Desktop</button>
+          <button class="tab" onclick="setMode('http')">HTTP Server</button>
+        </div>
+
+        <!-- Claude Desktop mode -->
+        <div id="mode-claude">
+          <p style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-bottom:12px;">
+            Writes the MCP config to Claude Desktop so it connects automatically on launch.
+          </p>
+          <button class="btn btn-primary btn-full" id="btn-configure-claude" onclick="configureClaude()">
+            Configure Claude Desktop
+          </button>
+          <div id="claude-msg" class="msg"></div>
+        </div>
+
+        <!-- HTTP Server mode -->
+        <div id="mode-http" class="hidden">
+          <div class="field">
+            <label>Port</label>
+            <input type="number" id="http-port" value="3000" style="width:100px;">
+          </div>
+          <div class="gap-8 mt-8">
+            <button class="btn btn-green" id="btn-start-server" onclick="startServer()">Start Server</button>
+            <button class="btn btn-ghost" id="btn-stop-server" onclick="stopServer()" disabled>Stop</button>
+          </div>
+          <div id="http-msg" class="msg"></div>
+        </div>
+      </div>
+
+      <!-- API Key Management -->
+      <div class="card">
+        <div class="card-label">API Key</div>
+        <div class="field">
+          <input type="text" id="dash-key" class="mono" readonly style="font-size:11px;">
+        </div>
+        <div class="gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="copyKey()">Copy</button>
+          <button class="btn btn-ghost btn-sm" onclick="regenerateKey()">Regenerate</button>
+        </div>
+        <div id="key-msg" class="msg"></div>
+      </div>
+
+      <!-- Disconnect -->
+      <div class="text-center mt-16">
+        <button class="btn btn-danger btn-sm" onclick="disconnect()">Disconnect Site</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    SitePilot v1.0.0 &nbsp;&middot;&nbsp;
+    <a onclick="window.sitepilot.shell.open('https://sitepilot.dev')">sitepilot.dev</a>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────
+  const LICENSE_API = 'https://sitepilot-api.YOUR-SUBDOMAIN.workers.dev'; // Update after deploying
+
+  // ── State ───────────────────────────────────────────────────
+  let state = {
+    licenseKey: '',
+    licensePlan: '',
+    licenseValid: false,
+    siteUrl: '',
+    apiKey: '',
+    siteName: '',
+    connected: false,
+    mode: 'claude',     // 'claude' or 'http'
+    setupMode: 'auto',  // 'auto' or 'manual'
+  };
+
+  // ── Init ────────────────────────────────────────────────────
+  async function init() {
+    const saved = await window.sitepilot.config.load();
+    state = { ...state, ...saved };
+
+    // Step 1: Check license
+    if (saved.licenseKey) {
+      const valid = await validateLicense(saved.licenseKey, saved.siteUrl || '');
+      if (!valid) {
+        showLicense();
+        return;
+      }
+    } else {
+      showLicense();
+      return;
+    }
+
+    // Step 2: Check site connection
+    if (saved.siteUrl && saved.apiKey) {
+      const result = await window.sitepilot.connection.test({
+        siteUrl: state.siteUrl,
+        apiKey: state.apiKey,
+      });
+      if (result.success) {
+        state.connected = true;
+        state.siteName = result.data.site || state.siteName;
+        state.version = result.data.version || '1.0.0';
+        showDashboard();
+      } else {
+        showSetup();
+      }
+    } else {
+      showSetup();
+    }
+  }
+
+  // ── License Validation ─────────────────────────────────────
+  async function validateLicense(key, siteUrl) {
+    try {
+      const res = await fetch(`${LICENSE_API}/api/license/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key: key, site_url: siteUrl || '' }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        state.licenseKey = key;
+        state.licensePlan = data.plan;
+        state.licenseValid = true;
+        return true;
+      }
+      return false;
+    } catch {
+      // If API is unreachable, allow cached license to work (grace period)
+      if (state.licenseKey === key && state.licenseValid) return true;
+      return false;
+    }
+  }
+
+  async function activateLicense() {
+    const key = document.getElementById('license-key').value.trim().toUpperCase();
+    const msgEl = document.getElementById('license-msg');
+    const btn = document.getElementById('btn-activate');
+
+    if (!key) {
+      showMsg(msgEl, 'error', 'Please enter your license key.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Validating...';
+
+    try {
+      const res = await fetch(`${LICENSE_API}/api/license/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key: key, site_url: '' }),
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        state.licenseKey = key;
+        state.licensePlan = data.plan;
+        state.licenseValid = true;
+
+        await window.sitepilot.config.save({
+          licenseKey: key,
+          licensePlan: data.plan,
+          licenseValid: true,
+        });
+
+        showMsg(msgEl, 'success', `License activated! Plan: ${data.plan === 'unlimited' ? 'Unlimited Sites' : 'Single Site'}`);
+        setTimeout(() => showSetup(), 800);
+      } else {
+        showMsg(msgEl, 'error', data.error || 'Invalid license key.');
+      }
+    } catch (e) {
+      showMsg(msgEl, 'error', 'Could not reach license server. Check your internet connection.');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Activate';
+  }
+
+  // ── Navigation ──────────────────────────────────────────────
+  function showLicense() {
+    document.getElementById('view-license').classList.add('active');
+    document.getElementById('view-setup').classList.remove('active');
+    document.getElementById('view-dashboard').classList.remove('active');
+    // Pre-fill if we have a saved key
+    if (state.licenseKey) {
+      document.getElementById('license-key').value = state.licenseKey;
+    }
+  }
+
+  function showSetup() {
+    document.getElementById('view-license').classList.remove('active');
+    document.getElementById('view-setup').classList.add('active');
+    document.getElementById('view-dashboard').classList.remove('active');
+  }
+
+  function showDashboard() {
+    document.getElementById('view-license').classList.remove('active');
+    document.getElementById('view-setup').classList.remove('active');
+    document.getElementById('view-dashboard').classList.add('active');
+    document.getElementById('dash-site-name').textContent = state.siteName || '--';
+    document.getElementById('dash-site-url').textContent = state.siteUrl || '--';
+    document.getElementById('dash-version').textContent = state.version || '1.0.0';
+    document.getElementById('dash-key').value = state.apiKey || '';
+    document.getElementById('dash-plan').textContent = state.licensePlan === 'unlimited' ? 'Unlimited Sites' : 'Single Site';
+    document.getElementById('dash-license').textContent = state.licenseKey || '--';
+  }
+
+  // ── Setup Mode Toggle ──────────────────────────────────────
+  function setSetupMode(mode) {
+    state.setupMode = mode;
+    document.querySelectorAll('.setup-tab').forEach((t, i) => {
+      t.classList.toggle('active', (mode === 'auto' && i === 0) || (mode === 'manual' && i === 1));
+    });
+    document.getElementById('setup-auto').classList.toggle('hidden', mode !== 'auto');
+    document.getElementById('setup-manual').classList.toggle('hidden', mode !== 'manual');
+  }
+
+  // ── Auto Setup ─────────────────────────────────────────────
+  async function doAutoSetup() {
+    const url = document.getElementById('auto-url').value.trim();
+    const user = document.getElementById('auto-user').value.trim();
+    const pass = document.getElementById('auto-pass').value.trim();
+    const msgEl = document.getElementById('auto-msg');
+    const btn = document.getElementById('btn-auto-setup');
+
+    if (!url || !user || !pass) {
+      showMsg(msgEl, 'error', 'All fields are required.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Connecting...';
+
+    const result = await window.sitepilot.connection.autoSetup({
+      siteUrl: url,
+      wpUser: user,
+      wpPass: pass,
+    });
+
+    if (result.success) {
+      state.siteUrl = url;
+      state.apiKey = result.apiKey;
+      state.siteName = result.data?.site || url;
+      state.version = result.data?.version || '1.0.0';
+      state.connected = true;
+
+      await window.sitepilot.config.save({
+        siteUrl: state.siteUrl,
+        apiKey: state.apiKey,
+        siteName: state.siteName,
+        version: state.version,
+      });
+
+      showMsg(msgEl, 'success', 'Connected! API key generated and saved to your site.');
+      setTimeout(() => showDashboard(), 800);
+    } else {
+      // Fallback message
+      let errMsg = result.error || 'Connection failed.';
+      if (errMsg.includes('404')) {
+        errMsg = 'SitePilot plugin not found. Make sure it is installed and activated on your WordPress site.';
+      } else if (errMsg.includes('401') || errMsg.includes('403')) {
+        errMsg = 'Authentication failed. Check your WordPress username and password. Tip: Use an Application Password (Users > Profile > Application Passwords).';
+      }
+      showMsg(msgEl, 'error', errMsg);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Connect &amp; Generate Key';
+  }
+
+  // ── Manual Setup ───────────────────────────────────────────
+  async function generateKey() {
+    const key = await window.sitepilot.key.generate();
+    document.getElementById('manual-key').value = key;
+    // Auto-copy to clipboard
+    navigator.clipboard.writeText(key).catch(() => {});
+    showMsg(document.getElementById('manual-msg'), 'info', 'Key generated and copied to clipboard. Paste it in Settings > SitePilot in WordPress.');
+  }
+
+  async function doManualTest() {
+    const url = document.getElementById('manual-url').value.trim();
+    const key = document.getElementById('manual-key').value.trim();
+    const msgEl = document.getElementById('manual-msg');
+    const btn = document.getElementById('btn-manual-test');
+
+    if (!url || !key) {
+      showMsg(msgEl, 'error', 'Enter your site URL and API key.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Testing...';
+
+    const result = await window.sitepilot.connection.test({ siteUrl: url, apiKey: key });
+
+    if (result.success) {
+      state.siteUrl = url;
+      state.apiKey = key;
+      state.siteName = result.data.site || url;
+      state.version = result.data.version || '1.0.0';
+      state.connected = true;
+
+      await window.sitepilot.config.save({
+        siteUrl: state.siteUrl,
+        apiKey: state.apiKey,
+        siteName: state.siteName,
+        version: state.version,
+      });
+
+      showMsg(msgEl, 'success', 'Connected!');
+      setTimeout(() => showDashboard(), 800);
+    } else {
+      showMsg(msgEl, 'error', result.error || 'Connection failed.');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Test Connection';
+  }
+
+  // ── Dashboard: AI Mode ─────────────────────────────────────
+  function setMode(mode) {
+    state.mode = mode;
+    document.querySelectorAll('.tabs .tab').forEach((t, i) => {
+      t.classList.toggle('active', (mode === 'claude' && i === 0) || (mode === 'http' && i === 1));
+    });
+    document.getElementById('mode-claude').classList.toggle('hidden', mode !== 'claude');
+    document.getElementById('mode-http').classList.toggle('hidden', mode !== 'http');
+  }
+
+  async function configureClaude() {
+    const btn = document.getElementById('btn-configure-claude');
+    const msgEl = document.getElementById('claude-msg');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Configuring...';
+
+    const result = await window.sitepilot.claude.configure({
+      siteUrl: state.siteUrl,
+      apiKey: state.apiKey,
+    });
+
+    if (result.success) {
+      showMsg(msgEl, 'success', `Claude Desktop configured. Restart Claude to activate. Config: ${result.configPath}`);
+    } else {
+      showMsg(msgEl, 'error', result.error || 'Failed to configure Claude Desktop.');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = 'Configure Claude Desktop';
+  }
+
+  async function startServer() {
+    const port = document.getElementById('http-port').value || '3000';
+    const msgEl = document.getElementById('http-msg');
+    const btnStart = document.getElementById('btn-start-server');
+    const btnStop = document.getElementById('btn-stop-server');
+
+    btnStart.disabled = true;
+    btnStart.innerHTML = '<span class="spinner"></span> Starting...';
+
+    const result = await window.sitepilot.server.start({
+      siteUrl: state.siteUrl,
+      apiKey: state.apiKey,
+      port: parseInt(port),
+    });
+
+    if (result.success) {
+      showMsg(msgEl, 'success', `MCP server running on http://localhost:${port}/mcp`);
+      btnStop.disabled = false;
+      btnStart.innerHTML = 'Running';
+      btnStart.disabled = true;
+    } else {
+      showMsg(msgEl, 'error', result.error || 'Failed to start server.');
+      btnStart.disabled = false;
+      btnStart.innerHTML = 'Start Server';
+    }
+  }
+
+  async function stopServer() {
+    const msgEl = document.getElementById('http-msg');
+    await window.sitepilot.server.stop();
+    showMsg(msgEl, 'info', 'Server stopped.');
+    document.getElementById('btn-start-server').disabled = false;
+    document.getElementById('btn-start-server').innerHTML = 'Start Server';
+    document.getElementById('btn-stop-server').disabled = true;
+  }
+
+  // ── Key Management ─────────────────────────────────────────
+  function copyKey() {
+    navigator.clipboard.writeText(state.apiKey).then(() => {
+      showMsg(document.getElementById('key-msg'), 'success', 'Copied to clipboard.');
+      setTimeout(() => hideMsg(document.getElementById('key-msg')), 2000);
+    });
+  }
+
+  async function regenerateKey() {
+    const newKey = await window.sitepilot.key.generate();
+    const msgEl = document.getElementById('key-msg');
+
+    state.apiKey = newKey;
+    document.getElementById('dash-key').value = newKey;
+
+    await window.sitepilot.config.save({
+      siteUrl: state.siteUrl,
+      apiKey: state.apiKey,
+      siteName: state.siteName,
+    });
+
+    navigator.clipboard.writeText(newKey).catch(() => {});
+    showMsg(msgEl, 'info', 'New key generated and copied. Update it in WordPress (Settings > SitePilot) and reconfigure your AI connection.');
+  }
+
+  // ── Disconnect ─────────────────────────────────────────────
+  async function disconnect() {
+    if (!confirm('Disconnect this site? This will remove the Claude Desktop config and clear your saved credentials. Your license key will be preserved.')) return;
+    await window.sitepilot.connection.disconnect();
+    const savedLicense = state.licenseKey;
+    const savedPlan = state.licensePlan;
+    state = { licenseKey: savedLicense, licensePlan: savedPlan, licenseValid: true, siteUrl: '', apiKey: '', siteName: '', connected: false, mode: 'claude', setupMode: 'auto' };
+    await window.sitepilot.config.save({ licenseKey: savedLicense, licensePlan: savedPlan, licenseValid: true });
+    showSetup();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  function showMsg(el, type, text) {
+    el.className = `msg show ${type}`;
+    el.textContent = text;
+  }
+
+  function hideMsg(el) {
+    el.classList.remove('show');
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  init();
+</script>
+
+</body>
+</html>

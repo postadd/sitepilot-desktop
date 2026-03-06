@@ -1,0 +1,57 @@
+{
+  "name": "sitepilot-desktop",
+  "version": "1.0.0",
+  "description": "SitePilot Desktop — Connect your WordPress site to AI assistants",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --mac --linux"
+  },
+  "build": {
+    "appId": "dev.sitepilot.desktop",
+    "productName": "SitePilot",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "src/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true
+    }
+  },
+  "author": "SitePilot <hello@sitepilot.dev>",
+  "homepage": "https://sitepilot.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR-USERNAME/sitepilot-desktop.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^4.21.0",
+    "electron-store": "^8.2.0",
+    "zod": "^3.24.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0"
+  }
+}
